@@ -1,9 +1,12 @@
 package main
 
 import (
+	"encoding/json"
+	"github.com/getsentry/sentry-go"
 	"github.com/google/uuid"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/synthia-telemed/push-notification-consumer/pkg/config"
+	"github.com/synthia-telemed/push-notification-consumer/pkg/consumer"
 	"go.uber.org/zap"
 	"log"
 	"os"
@@ -12,15 +15,19 @@ import (
 	"time"
 )
 
-func failOnError(logger *zap.SugaredLogger, err error, msg string) {
-	if err != nil {
-		logger.Fatalw(msg, err)
+func assertError(logger *zap.SugaredLogger, err error, isFatal bool, msg string) bool {
+	if err == nil {
+		return false
 	}
+	sentry.CaptureException(err)
+	if isFatal {
+		sentry.Flush(time.Second * 2)
+		logger.Fatalw(msg, "error", err.Error())
+		return true
+	}
+	logger.Errorw(msg, "error", err.Error())
+	return true
 }
-
-const (
-	QueueName = "push-notification"
-)
 
 func main() {
 	z, err := zap.NewDevelopment()
@@ -28,25 +35,25 @@ func main() {
 		log.Fatalln("Failed to creat zap logger")
 	}
 	logger := z.Sugar()
-
 	cfg, err := config.Load()
-	failOnError(logger, err, "Failed to parse env")
+	assertError(logger, err, true, "Failed to parse env")
+	err = sentry.Init(sentry.ClientOptions{TracesSampleRate: 1.0, Dsn: cfg.SentryDSN})
+	assertError(logger, err, false, "Failed to init sentry")
 
 	conn, err := amqp.Dial(cfg.RabbitMQ.GetURL())
-	failOnError(logger, err, "Failed to connect to RabbitMQ")
-
+	assertError(logger, err, true, "Failed to connect to RabbitMQ")
 	ch, err := conn.Channel()
-	failOnError(logger, err, "Failed to open a channel")
+	assertError(logger, err, true, "Failed to open a channel")
 
 	q, err := ch.QueueDeclare(
-		QueueName,
+		cfg.RabbitMQ.QueueName,
 		true,
 		false,
 		false,
 		false,
 		nil,
 	)
-	failOnError(logger, err, "Failed to declare a queue")
+	assertError(logger, err, true, "Failed to declare a queue")
 	consumerName := uuid.NewString()
 	msgs, err := ch.Consume(
 		q.Name,
@@ -57,13 +64,15 @@ func main() {
 		false,
 		nil,
 	)
-	failOnError(logger, err, "Failed to register a consumer")
+	assertError(logger, err, true, "Failed to register a consumer")
 
 	go func() {
 		for d := range msgs {
-			logger.Infow("Received msg", "body", d.Body)
-			time.Sleep(time.Second)
-			log.Printf("Done")
+			var body consumer.PushNotificationMessageBody
+			if assertError(logger, json.Unmarshal(d.Body, &body), false, "Failed to parse message body") {
+				d.Nack(false, true)
+				continue
+			}
 			d.Ack(false)
 		}
 	}()
@@ -73,8 +82,8 @@ func main() {
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
 	logger.Info("Shutting down consumer...")
-	failOnError(logger, ch.Cancel(consumerName, false), "Failed to cancel the channel")
-	failOnError(logger, ch.Close(), "Failed to close the channel")
-	failOnError(logger, conn.Close(), "Failed to close the connection")
+	assertError(logger, ch.Cancel(consumerName, false), true, "Failed to cancel the channel")
+	assertError(logger, ch.Close(), true, "Failed to close the channel")
+	assertError(logger, conn.Close(), true, "Failed to close the connection")
 	logger.Info("Consumer exiting")
 }

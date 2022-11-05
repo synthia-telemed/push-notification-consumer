@@ -10,13 +10,15 @@ import (
 type Config struct {
 	Notification notification.Config
 	RabbitMQ     RabbmitMQ
+	SentryDSN    string `env:"SENTRY_DSN"`
 }
 
 type RabbmitMQ struct {
-	User     string `env:"RABBITMQ_USER" envDefault:"guest"`
-	Password string `env:"RABBITMQ_PASSWORD" envDefault:"guest"`
-	Host     string `env:"RABBITMQ_HOST" envDefault:"localhost"`
-	Port     string `env:"RABBITMQ_PORT" envDefault:"5672"`
+	User      string `env:"RABBITMQ_USER" envDefault:"guest"`
+	Password  string `env:"RABBITMQ_PASSWORD" envDefault:"guest"`
+	Host      string `env:"RABBITMQ_HOST" envDefault:"localhost"`
+	Port      string `env:"RABBITMQ_PORT" envDefault:"5672"`
+	QueueName string `env:"RABBITMQ_QUEUE_NAME" envDefault:"push-notification"`
 }
 
 func (r RabbmitMQ) GetURL() string {
