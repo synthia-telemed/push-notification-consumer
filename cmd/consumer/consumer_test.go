@@ -120,15 +120,6 @@ var _ = Describe("Push notification consumer", func() {
 				Expect(isAck).To(BeTrue())
 			})
 		})
-		When("patient's notification token is empty", func() {
-			BeforeEach(func() {
-				patient.NotificationToken = ""
-				mockPatientDataStore.EXPECT().FindByIDOrRefID(payload.ID).Return(patient, nil)
-			})
-			It("should return isAck as true", func() {
-				Expect(isAck).To(BeTrue())
-			})
-		})
 
 		When("save notification to db error", func() {
 			BeforeEach(func() {
@@ -140,6 +131,16 @@ var _ = Describe("Push notification consumer", func() {
 			})
 		})
 
+		When("patient's notification token is empty", func() {
+			BeforeEach(func() {
+				patient.NotificationToken = ""
+				mockNotificationDataStore.EXPECT().Create(notification)
+				mockPatientDataStore.EXPECT().FindByIDOrRefID(payload.ID).Return(patient, nil)
+			})
+			It("should return isAck as true", func() {
+				Expect(isAck).To(BeTrue())
+			})
+		})
 		When("send push notification error", func() {
 			BeforeEach(func() {
 				mockPatientDataStore.EXPECT().FindByIDOrRefID(payload.ID).Return(patient, nil)

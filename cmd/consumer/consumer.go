@@ -79,9 +79,6 @@ func (c PushNotificationConsumer) Process(d amqp091.Delivery) bool {
 		c.logger.Warnw("patient not found", "id", payload.ID)
 		return true
 	}
-	if patient.NotificationToken == "" {
-		return true
-	}
 
 	// Save notification in db
 	noti := &datastore.Notification{
@@ -96,6 +93,9 @@ func (c PushNotificationConsumer) Process(d amqp091.Delivery) bool {
 		return false
 	}
 
+	if patient.NotificationToken == "" {
+		return true
+	}
 	// Send push notification
 	params := notification.SendParams{
 		Token: patient.NotificationToken,
