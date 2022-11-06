@@ -2,6 +2,7 @@ package consumer_test
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/go-playground/validator/v10"
 	"github.com/golang/mock/gomock"
 	"github.com/google/uuid"
@@ -64,6 +65,7 @@ var _ = Describe("Push notification consumer", func() {
 
 			patient = &datastore.Patient{RefID: uuid.NewString(), ID: uint(rand.Uint32()), NotificationToken: uuid.NewString()}
 			notification = &datastore.Notification{Title: payload.Title, Body: payload.Body, IsRead: false, PatientID: patient.ID}
+			payload.Data["notificationID"] = fmt.Sprintf("%d", notification.ID)
 			sendParams = Notification.SendParams{Title: payload.Title, Body: payload.Body, Token: patient.NotificationToken}
 		})
 

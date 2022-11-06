@@ -3,6 +3,7 @@ package consumer
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"github.com/getsentry/sentry-go"
 	"github.com/go-playground/validator/v10"
 	"github.com/rabbitmq/amqp091-go"
@@ -101,6 +102,7 @@ func (c PushNotificationConsumer) Process(d amqp091.Delivery) bool {
 		Title: noti.Title,
 		Body:  noti.Body,
 	}
+	payload.Data["notificationID"] = fmt.Sprintf("%d", noti.ID)
 	err = c.notificationClient.Send(context.Background(), params, payload.Data)
 	if err != nil {
 		c.assertError(err, "c.notificationClient.Send error")
