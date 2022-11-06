@@ -30,7 +30,9 @@ jobs:
     - name: Install mockgen
       run: go install github.com/golang/mock/mockgen@v1.6.0
     - name: Install Ginkgo
-      run: go install github.com/onsi/ginkgo/v2/ginkgo@v2.1.4 
+      run: go install github.com/onsi/ginkgo/v2/ginkgo@v2.1.4
+    - name: Download dependency
+      run: go mod download
     - name: mockgen
       run: make mockgen
     - name: Run unit tests
