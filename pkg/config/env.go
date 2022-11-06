@@ -10,12 +10,12 @@ import (
 
 type Config struct {
 	Notification notification.Config
-	RabbitMQ     RabbmitMQ
+	RabbitMQ     RabbitMQ
 	SentryDSN    string `env:"SENTRY_DSN"`
 	DB           datastore.Config
 }
 
-type RabbmitMQ struct {
+type RabbitMQ struct {
 	User      string `env:"RABBITMQ_USER" envDefault:"guest"`
 	Password  string `env:"RABBITMQ_PASSWORD" envDefault:"guest"`
 	Host      string `env:"RABBITMQ_HOST" envDefault:"localhost"`
@@ -23,7 +23,7 @@ type RabbmitMQ struct {
 	QueueName string `env:"RABBITMQ_QUEUE_NAME" envDefault:"push-notification"`
 }
 
-func (r RabbmitMQ) GetURL() string {
+func (r RabbitMQ) GetURL() string {
 	return fmt.Sprintf("amqp://%s:%s@%s:%s", r.User, r.Password, r.Host, r.Port)
 }
 
