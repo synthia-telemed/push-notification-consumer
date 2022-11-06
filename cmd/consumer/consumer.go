@@ -15,7 +15,7 @@ type Consumer interface {
 	Consume(msgs <-chan amqp091.Delivery)
 }
 
-type consumer struct {
+type PushNotificationConsumer struct {
 	validator             *validator.Validate
 	patientDataStore      datastore.PatientDataStore
 	notificationDataStore datastore.NotificationDataStore
@@ -23,8 +23,13 @@ type consumer struct {
 	logger                *zap.SugaredLogger
 }
 
-func NewPushNotificationConsumer(validate *validator.Validate, patientDataStore datastore.PatientDataStore, notificationDataStore datastore.NotificationDataStore, notificationClient notification.Client, logger *zap.SugaredLogger) Consumer {
-	return &consumer{
+func NewPushNotificationConsumer(validate *validator.Validate, patientDataStore datastore.PatientDataStore, notificationDataStore datastore.NotificationDataStore, notificationClient notification.Client, logger *zap.SugaredLogger) *PushNotificationConsumer {
+	_ = validate.RegisterValidation("mapData", func(fl validator.FieldLevel) bool {
+		_, ok := fl.Field().Interface().(map[string]string)
+		return ok
+	})
+
+	return &PushNotificationConsumer{
 		validator:             validate,
 		patientDataStore:      patientDataStore,
 		notificationDataStore: notificationDataStore,
@@ -33,10 +38,10 @@ func NewPushNotificationConsumer(validate *validator.Validate, patientDataStore 
 	}
 }
 
-func (c consumer) Consume(msgs <-chan amqp091.Delivery) {
+func (c PushNotificationConsumer) Consume(msgs <-chan amqp091.Delivery) {
 	for d := range msgs {
 		go func() {
-			isAck := c.process(d)
+			isAck := c.Process(d)
 			if isAck {
 				c.assertError(d.Ack(false), "Failed to ack")
 				return
@@ -46,7 +51,7 @@ func (c consumer) Consume(msgs <-chan amqp091.Delivery) {
 	}
 }
 
-func (c consumer) process(d amqp091.Delivery) bool {
+func (c PushNotificationConsumer) Process(d amqp091.Delivery) bool {
 	// Payload parsing and validation
 	payload, err := c.ParsePayload(d.Body)
 	if err != nil {
@@ -56,6 +61,10 @@ func (c consumer) process(d amqp091.Delivery) bool {
 
 	if err := c.validator.Struct(payload); err != nil {
 		c.logger.Warnw("payload doesn't pass validation", "error", err.Error(), "payload", payload)
+		return true
+	}
+	if err := c.validator.Var(payload.Data, "mapData"); err != nil {
+		c.logger.Warnw("payload data doesn't pass validation", "error", err.Error(), "payload", payload)
 		return true
 	}
 
@@ -100,7 +109,7 @@ func (c consumer) process(d amqp091.Delivery) bool {
 	return true
 }
 
-func (c consumer) ParsePayload(body []byte) (*Payload, error) {
+func (c PushNotificationConsumer) ParsePayload(body []byte) (*Payload, error) {
 	var payload Payload
 	if err := json.Unmarshal(body, &payload); err != nil {
 		return nil, err
@@ -108,7 +117,7 @@ func (c consumer) ParsePayload(body []byte) (*Payload, error) {
 	return &payload, nil
 }
 
-func (c consumer) assertError(err error, msg string) {
+func (c PushNotificationConsumer) assertError(err error, msg string) {
 	if err != nil {
 		sentry.CaptureException(err)
 		c.logger.Errorw(msg, "error", err.Error())
