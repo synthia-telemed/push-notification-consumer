@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/caarlos0/env/v6"
 	"github.com/joho/godotenv"
+	"github.com/synthia-telemed/push-notification-consumer/pkg/datastore"
 	"github.com/synthia-telemed/push-notification-consumer/pkg/notification"
 )
 
@@ -11,6 +12,7 @@ type Config struct {
 	Notification notification.Config
 	RabbitMQ     RabbmitMQ
 	SentryDSN    string `env:"SENTRY_DSN"`
+	DB           datastore.Config
 }
 
 type RabbmitMQ struct {
