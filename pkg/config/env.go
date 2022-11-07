@@ -16,11 +16,13 @@ type Config struct {
 }
 
 type RabbitMQ struct {
-	User      string `env:"RABBITMQ_USER" envDefault:"guest"`
-	Password  string `env:"RABBITMQ_PASSWORD" envDefault:"guest"`
-	Host      string `env:"RABBITMQ_HOST" envDefault:"localhost"`
-	Port      string `env:"RABBITMQ_PORT" envDefault:"5672"`
-	QueueName string `env:"RABBITMQ_QUEUE_NAME" envDefault:"push-notification"`
+	User         string `env:"RABBITMQ_USER" envDefault:"guest"`
+	Password     string `env:"RABBITMQ_PASSWORD" envDefault:"guest"`
+	Host         string `env:"RABBITMQ_HOST" envDefault:"localhost"`
+	Port         string `env:"RABBITMQ_PORT" envDefault:"5672"`
+	QueueName    string `env:"RABBITMQ_QUEUE_NAME" envDefault:"push-notification-queue"`
+	ExchangeName string `env:"RABBITMQ_EXCHANGE_NAME" envDefault:"notification"`
+	RoutingKey   string `env:"RABBITMQ_ROUTING_KEY" envDefault:"push-notification"`
 }
 
 func (r RabbitMQ) GetURL() string {

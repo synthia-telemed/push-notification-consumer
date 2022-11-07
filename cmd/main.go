@@ -58,6 +58,9 @@ func main() {
 	ch, err := conn.Channel()
 	assertError(logger, err, true, "Failed to open a channel")
 
+	err = ch.ExchangeDeclare(cfg.RabbitMQ.ExchangeName, "direct", true, false, false, false, nil)
+	assertError(logger, err, true, "Failed to declare exchange")
+
 	q, err := ch.QueueDeclare(
 		cfg.RabbitMQ.QueueName,
 		true,
@@ -67,6 +70,10 @@ func main() {
 		nil,
 	)
 	assertError(logger, err, true, "Failed to declare a queue")
+
+	err = ch.QueueBind(q.Name, cfg.RabbitMQ.RoutingKey, cfg.RabbitMQ.ExchangeName, false, nil)
+	assertError(logger, err, true, "Failed to bind queue")
+
 	consumerName := uuid.NewString()
 	msgs, err := ch.Consume(
 		q.Name,
